@@ -1,0 +1,84 @@
+---------------------------------------------------------------------------------------
+LCD Interface
+
+#include <lpc214x.h>
+
+/* Configurung the data and ctrl bus port*/
+#define LcdDataBusPort IOPIN0
+#define LcdCtrlBusPort IOPIN0
+#define LcdDataBusDirnReg IODIR0
+#define LcdCtrlBusDirnReg IODIR0
+
+
+// PIN definations
+#define LCD_RS	13
+#define LCD_RW	 4
+#define LCD_EN	12
+#define LCD_D4	 8
+#define LCD_D5	 9
+#define LCD_D6	10
+#define LCD_D7	11
+
+// Mask for both Bus
+#define LCD_CtrlBusMask ((1<<LCD_RS)|(1<LCD_RW)|(1<<LCD_EN))
+#define LCD_DataBusMask ((1<<LCD_D4)|(1<LCD_D5)|(1<<LCD_D6)|(1<<LCD_D7))
+
+int main(){
+	cmdWrite(0x02);cmdWrite(0x28);cmdWrite(0x80);cmdWrite(0x0E);cmdWrite(0x01);
+}
+---------------------------------------------------------------------------------------
+PWM Setup for X PWM:
+
+        PWMPCR = 0x00;
+        PWMPR = 60000-1;
+
+        PWMMR0 = 10;
+
+        PWMMCR = (1<<1);
+        PWMLER = (1<<X)|(1<<0);
+        PWMPCR = (1 << (X+8));    // PWMENAx
+        PWMTCR = (1<<1);
+        PWMTCR = (1<<0)|(1<<3);
+------------------------------------------------------------------------------------------
+PLL Config:
+
+        PLL0CON = 0x01;
+        PLL0CFG = 0x24;  // MSEL -> 4, PSEL -> 1
+        PLL0FEED = 0xaa;
+        PLL0FEED = 0x55;
+
+        while(!(PLL0STAT & (1 << LOCK)));
+
+        PLL0CON = 0x03;
+        PLL0FEED = 0xaa;
+        PLL0FEED = 0x55;
+        VPBDIV = 0x01;
+
+------------------------------------------------------------------------------------------
+UART Config:
+        void initUART0(void){
+        unsigned char temp;
+        U0LCR = 0x83;
+        temp = (fpclk/16)/baud_9600;
+        U0DLM = temp/256;
+        U0DLL = temp%256;
+        U0FCR = 0x01;
+        U0LCR = 0x03;
+}
+
+void UART0_sendByte(unsigned char data){
+        U0THR = data;
+        while((U0LSR & 0x40) == 0);
+}
+
+int UART0_getByte(void){
+        while((U0LSR & 0x01) == 0);
+        return U0RBR;
+}
+
+#define fosc (12000000)
+#define fcclk (fosc*5)
+#define fcco (fcclk*4)
+#define fpclk (fcclk/4)*1
+#define baud_9600 (9600)
+------------------------------------------------------------------------------------------
